@@ -1,61 +1,73 @@
-# Stock Analysis Project
+# Análisis de Tickers del NASDAQ
 
-This project is designed to download, analyze, and recommend stocks based on technical indicators. It primarily focuses on NASDAQ tickers and uses various Python libraries to perform the analysis.
+Este proyecto realiza un análisis técnico de los tickers del NASDAQ utilizando diversos indicadores financieros. Los resultados se almacenan en archivos CSV para su posterior análisis.
 
+## Requisitos
 
-## Files and Directories
+- Python 3.11.9
+- Pandas
+- yFinance
+- TA-Lib
+- Requests
 
-- **`.gitignore`**: Specifies files and directories to be ignored by Git.
-- **`analysis_results/`**: Contains the results of the stock analysis.
-- **`analyze_tickers.ipynb`**: Jupyter notebook for analyzing tickers.
-- **`compra_alfayate.ipynb`**: Jupyter notebook for stock purchase analysis based on Alfayate's criteria.
-- **`compra.ipynb`**: Jupyter notebook for stock purchase recommendations.
-- **`download_tickers.py`**: Python script to download and analyze stock tickers.
-- **`nasdaq_analysis_results/`**: Contains the analysis results for NASDAQ tickers.
-- **`venv/`**: Virtual environment directory.
+## Instalación
 
-## Setup
-
-1. **Clone the repository**:
+1. Clona el repositorio:
     ```sh
     git clone https://github.com/jpozo6/Trading.git
-    cd Trading/
+    cd Trading
     ```
 
-2. **Create and activate a virtual environment**:
+2. Crea y activa un entorno virtual:
     ```sh
     python -m venv venv
-    source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+    source venv/bin/activate  # En Windows usa `venv\Scripts\activate`
     ```
 
-3. **Install the required packages**:
+3. Instala las dependencias:
     ```sh
     pip install -r requirements.txt
     ```
 
-## Usage
+## Uso
 
-### Download and Analyze Tickers
+### Descargar y Analizar Tickers
 
-Run the `download_tickers.py` script to download and analyze the top 50 NASDAQ tickers:
+Para descargar y analizar los tickers del NASDAQ, ejecuta el script `download_tickers.py`:
 
 ```sh
-python [download_tickers.py]
+python download_tickers.py
+```
 
-## Analyze Tickers in Jupyter Notebooks
+### Análisis Completo
 
-Open the Jupyter notebooks (analyze_tickers.ipynb, compra_alfayate.ipynb, compra.ipynb) to perform further analysis and generate recommendations
+Para realizar un análisis completo, ejecuta el script analysis_complete.py:
 
-Functions
-download_tickers.py
-  - get_top_nasdaq_tickers(n=50): Fetches the top n NASDAQ tickers.
-  - download_and_analyze_ticker(ticker, period='1y', interval='1d'): Downloads and analyzes a specific ticker.
-  - main(): Main function to create output directories, get tickers, and process them.
-compra.ipynb
-  - analyze_tickers(interval='1d'): Analyzes tickers and generates purchase recommendations based on technical indicators.
-Results
-The analysis results are saved in the nasdaq_analysis_results/ directory, and the recommendations are saved in the analysis_results/ directory.
+```sh
+python analysis_complete.py
+```
 
-License
-This project is licensed under the MIT License.
+### Backtesting
 
+El script backtesting.py genera archivos CSV con los resultados del backtesting para diferentes estrategias en la carpeta backtesting/.
+Para realizar backtesting, ejecuta el script backtesting.py:
+
+```sh
+python backtesting.py
+```
+
+### Notebooks
+
+También puedes utilizar los notebooks Jupyter para análisis interactivos:
+
+- analyze_tickers.ipynb
+- compra_alfayate.ipynb
+- compra.ipynb
+
+### Contribuciones
+
+Las contribuciones son bienvenidas. Por favor, abre un issue o un pull request para discutir cualquier cambio que desees realizar.
+
+### Licencia
+
+Este proyecto está bajo la Licencia MIT. Consulta el archivo LICENSE para más detalles.
