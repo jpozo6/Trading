@@ -1,4 +1,4 @@
-# backtesting_script.py
+# backtesting.py
 
 import pandas as pd
 import numpy as np
@@ -65,20 +65,20 @@ def calculate_indicators(df_daily, benchmark_daily):
     # Alfayate Indicators
     df_daily['sma50'] = ta.trend.SMAIndicator(df_daily['Close'], window=50).sma_indicator()
     df_daily['sma200'] = ta.trend.SMAIndicator(df_daily['Close'], window=200).sma_indicator()
-    df_daily['sma30'] = ta.trend.SMAIndicator(df_daily['Close'], window=30).sma_indicator()
-    df_daily['CPM'] = df_daily['Close'] * df_daily['Volume']
-    df_daily['CPM252'] = df_daily['CPM'].rolling(window=252).mean()
-    df_daily['sma5_cpm252'] = df_daily['CPM252'].rolling(window=5).mean()
-    df_daily['sma20_cpm252'] = df_daily['CPM252'].rolling(window=20).mean()
-    df_daily['max_52weeks'] = df_daily['High'].rolling(window=252).max()
-    df_daily['distance_to_max'] = abs(df_daily['max_52weeks'] - df_daily['Close']) / df_daily['max_52weeks']
-    df_daily['stop_risk'] = abs(df_daily['Close'] - df_daily['sma30']) / df_daily['Close']
+    df_weekly['sma30'] = ta.trend.SMAIndicator(df_weekly['Close'], window=30).sma_indicator()
+    df_weekly['CPM'] = df_weekly['Close'] * df_weekly['Volume']
+    df_weekly['CPM52'] = df_weekly['CPM'].rolling(window=52).mean()
+    df_weekly['sma5_cpm52'] = df_weekly['CPM52'].rolling(window=5).mean()
+    df_weekly['sma20_cpm52'] = df_weekly['CPM52'].rolling(window=20).mean()
+    df_weekly['max_52weeks'] = df_weekly['High'].rolling(window=52).max()
+    df_weekly['distance_to_max'] = abs(df_weekly['max_52weeks'] - df_weekly['Close']) / df_weekly['max_52weeks']
+    df_weekly['stop_risk'] = abs(df_weekly['Close'] - df_weekly['sma30']) / df_weekly['Close']
 
-    # RSC Mansfield (Daily)
-    df_daily['benchmark_close'] = benchmark_daily['Close']
-    df_daily['rsc_ratio'] = df_daily['Close'] / df_daily['benchmark_close']
-    df_daily['rsc_sma252'] = df_daily['rsc_ratio'].rolling(window=252).mean()
-    df_daily['rsc_mansfield'] = (df_daily['rsc_ratio'] / df_daily['rsc_sma252'] - 1) * 100
+    # RSC Mansfield (Weekly)
+    df_weekly['benchmark_close'] = benchmark_daily['Close']
+    df_weekly['rsc_ratio'] = df_weekly['Close'] / df_weekly['benchmark_close']
+    df_weekly['rsc_sma252'] = df_weekly['rsc_ratio'].rolling(window=252).mean()
+    df_weekly['rsc_mansfield'] = (df_weekly['rsc_ratio'] / df_weekly['rsc_sma252'] - 1) * 100
 
     # MACD semanal
     macd_weekly = ta.trend.MACD(df_weekly['Close'])
@@ -93,8 +93,9 @@ def calculate_indicators(df_daily, benchmark_daily):
     df_weekly = df_weekly.reset_index().rename(columns={'index': 'Date'})
     df_monthly = df_monthly.reset_index().rename(columns={'index': 'Date'})
 
-    # Merge MACD (Weekly) into daily DataFrame
-    df = df_daily.merge(df_weekly[['Date', 'macd', 'macd_signal']], on='Date', how='left')
+    # Merge MACD y Alfayate (Weekly) into daily DataFrame
+    df = df_daily.merge(df_weekly[['Date', 'macd', 'macd_signal', 'CPM', 'CPM52', 'sma5_cpm52', 'sma20_cpm52', 'max_52weeks', 'distance_to_max', 'stop_risk',
+                                   'benchmark_close', 'rsc_ratio', 'rsc_sma252', 'rsc_mansfield']], on='Date', how='left')
     # Merge Coppock (Monthly) into daily DataFrame
     df = df.merge(df_monthly[['Date', 'coppock']], on='Date', how='left')
 
@@ -102,7 +103,9 @@ def calculate_indicators(df_daily, benchmark_daily):
     df.sort_index(inplace=True)
 
     # Rellenar valores NaN hacia adelante para indicadores semanales y mensuales
-    df[['macd', 'macd_signal', 'coppock']] = df[['macd', 'macd_signal', 'coppock']].fillna(method='ffill')
+    df[['macd', 'macd_signal', 'coppock', 'CPM', 'CPM52', 'sma5_cpm52', 'sma20_cpm52', 'max_52weeks', 'distance_to_max', 'stop_risk', 'benchmark_close', 'rsc_ratio', 
+        'rsc_sma252', 'rsc_mansfield']] = df[['macd', 'macd_signal', 'coppock', 'CPM', 'CPM52', 'sma5_cpm52', 'sma20_cpm52', 'max_52weeks', 'distance_to_max', 'stop_risk',
+        'benchmark_close', 'rsc_ratio', 'rsc_sma252', 'rsc_mansfield']].fillna(method='ffill')
 
     return df
 
@@ -138,7 +141,7 @@ def backtest_ticker(ticker, start_date, end_date, benchmark_df):
         prev_row = df.loc[i - 1]
         close_price = row['Close']
 
-        ### Estrategia Alfayate (Diario) ###
+        ### Estrategia Alfayate (Semanal) ###
         indicators = ['distance_to_max', 'rsc_mansfield', 'sma5_cpm252', 'stop_risk']
         if all(pd.notna(row[ind]) for ind in indicators):
             condition1_buy = row['distance_to_max'] <= 0.02
@@ -235,7 +238,7 @@ def trading_logic(strategy, positions, portfolios, buy_prices, buy_dates, signal
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Uso: python backtesting_script.py [sp500|nasdaq]")
+        print("Uso: python backtesting.py [sp500|nasdaq]")
         sys.exit()
     index_name = sys.argv[1]
     tickers = get_tickers(index_name)
