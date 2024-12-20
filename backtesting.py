@@ -61,10 +61,18 @@ def calculate_indicators(df_daily, benchmark_daily):
         'Volume': 'sum',
     })
 
-    # Calcular indicadores en temporalidad diaria (Alfayate y Cruce de Medias)
+    # Calcular indicadores en temporalidad diaria (Cruce de Medias)
     # Alfayate Indicators
     df_daily['sma50'] = ta.trend.SMAIndicator(df_daily['Close'], window=50).sma_indicator()
     df_daily['sma200'] = ta.trend.SMAIndicator(df_daily['Close'], window=200).sma_indicator()
+
+
+    # MACD semanal
+    macd_weekly = ta.trend.MACD(df_weekly['Close'])
+    df_weekly['macd'] = macd_weekly.macd()
+    df_weekly['macd_signal'] = macd_weekly.macd_signal()
+
+    # Alfayate Indicators (Weekly)
     df_weekly['sma30'] = ta.trend.SMAIndicator(df_weekly['Close'], window=30).sma_indicator()
     df_weekly['CPM'] = df_weekly['Close'] * df_weekly['Volume']
     df_weekly['CPM52'] = df_weekly['CPM'].rolling(window=52).mean()
@@ -79,11 +87,6 @@ def calculate_indicators(df_daily, benchmark_daily):
     df_weekly['rsc_ratio'] = df_weekly['Close'] / df_weekly['benchmark_close']
     df_weekly['rsc_sma252'] = df_weekly['rsc_ratio'].rolling(window=252).mean()
     df_weekly['rsc_mansfield'] = (df_weekly['rsc_ratio'] / df_weekly['rsc_sma252'] - 1) * 100
-
-    # MACD semanal
-    macd_weekly = ta.trend.MACD(df_weekly['Close'])
-    df_weekly['macd'] = macd_weekly.macd()
-    df_weekly['macd_signal'] = macd_weekly.macd_signal()
 
     # Coppock Curve mensual
     df_monthly['coppock'] = calculate_coppock_curve(df_monthly['Close'])
