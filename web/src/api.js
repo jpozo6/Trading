@@ -13,12 +13,17 @@ export const getStrategies = async () => {
     return response.data;
 };
 
-export const runAnalysis = async (ticker, strategyId) => {
-    const response = await axios.post(`${API_URL}/analyze`, { ticker, strategy_id: strategyId });
+export const runAnalysis = async (ticker, strategyId, years = 5) => {
+    const response = await axios.post(`${API_URL}/analyze`, { ticker, strategy_id: strategyId, years });
     return response.data;
 };
 
-export const runBacktest = async (ticker, strategyId) => {
-    const response = await axios.post(`${API_URL}/backtest`, { ticker, strategy_id: strategyId });
+export const runBacktest = async (ticker, strategyId, years = 5) => {
+    const response = await axios.post(`${API_URL}/backtest`, { ticker, strategy_id: strategyId, years });
+    return response.data;
+};
+
+export const runBacktestAll = async (ticker, years = 5) => {
+    const response = await axios.post(`${API_URL}/backtest_all`, { ticker, years });
     return response.data;
 };

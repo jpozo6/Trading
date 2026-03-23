@@ -169,7 +169,11 @@ class DataService:
     def get_sp500_tickers(self):
         # Fallback or scraper
         try:
-            table = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')
+            import requests
+            from io import StringIO
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+            response = requests.get('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies', headers=headers)
+            table = pd.read_html(StringIO(response.text))
             df = table[0]
             tickers = df['Symbol'].tolist()
             return [t.replace('.', '-') for t in tickers]

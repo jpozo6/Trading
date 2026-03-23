@@ -9,13 +9,14 @@ class CoppockStrategy(BaseStrategy):
         super().__init__("Coppock Curve")
 
     def calculate_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
-        # Resample to Monthly
-        df_monthly = df.resample('M').agg({
+        # Resample to Monthly (use 'ME' for month-end to avoid deprecation warning)
+        df_monthly = df.resample('ME').agg({
             'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'
         })
         
-        # Calculate Coppock
-        df_monthly['coppock'] = calculate_coppock(df_monthly['Close'])
+        # Calculate Coppock with user-specified parameters: (12, 6, 10)
+        # User: "Curva de Coppock (12, 6, 10)" -> WMA(10) of [ROC(12) + ROC(6)]
+        df_monthly['coppock'] = calculate_coppock(df_monthly['Close'], wma_period=10, roc1_period=12, roc2_period=6)
         df_monthly['coppock_prev'] = df_monthly['coppock'].shift(1)
         
         # Map back to daily if needed, or keep monthly logic. 

@@ -2,27 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: 'Inter', sans-serif;
-  background-color: #111827;
-  color: #f3f4f6;
+@layer base {
+  body {
+    @apply bg-gray-950 text-gray-100 font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-gray-900/70 backdrop-blur-md border border-gray-800 shadow-xl;
+  }
+
+  .glass-card {
+    @apply bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg;
+  }
+
+  .input-field {
+    @apply w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all;
+  }
+
+  .btn-primary {
+    @apply bg-brand-600 hover:bg-brand-500 text-white font-semibold py-2 px-6 rounded-lg transition-all shadow-lg shadow-brand-500/20 active:scale-95 flex items-center justify-center gap-2;
+  }
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1f2937;
+  @apply bg-gray-900;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  @apply bg-gray-700 rounded hover:bg-gray-600;
 }

@@ -143,7 +143,7 @@ class PutCallStrategy(BaseStrategy):
         cond_bb_low = df['sma10_pc'] < df['bb_low']
         cond_level_sell = df['pc_ratio'] < 0.82
         
-        cond_sell = cond_bb_low & cond_level_sel
+        cond_sell = cond_bb_low & cond_level_sell
         
         df.loc[cond_buy, 'Signal'] = 1
         df.loc[cond_sell, 'Signal'] = -1

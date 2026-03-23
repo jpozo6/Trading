@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 import pandas as pd
+import numpy as np
 import sys
 import os
 
@@ -66,12 +67,13 @@ def get_strategies():
     return [{"id": k, "name": v.name} for k, v in strategies.items()]
 
 @app.post("/analyze")
-def analyze(ticker: str = Body(...), strategy_id: str = Body(...)):
+def analyze(ticker: str = Body(...), strategy_id: str = Body(...), years: int = Body(5)):
     strategy = strategies.get(strategy_id)
     if not strategy:
         raise HTTPException(status_code=404, detail="Strategy not found")
         
-    df = data_service.get_data(ticker)
+    start_date = (pd.Timestamp.now() - pd.DateOffset(years=years)).strftime('%Y-%m-%d')
+    df = data_service.get_data(ticker, start_date=start_date)
     if df is None or df.empty:
         raise HTTPException(status_code=404, detail="Data not found for ticker")
         
@@ -104,8 +106,40 @@ def analyze(ticker: str = Body(...), strategy_id: str = Body(...)):
         
     latest = strategy.get_latest_signal(results)
     
-    # Return last 50 records for charting? Limit payload.
-    chart_data = results.tail(100).reset_index().to_dict(orient='records')
+    # Helper function to sanitize NaN/Inf values for JSON
+    def sanitize_for_json(obj):
+        if isinstance(obj, dict):
+            return {k: sanitize_for_json(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [sanitize_for_json(item) for item in obj]
+        elif isinstance(obj, float):
+            if np.isnan(obj) or np.isinf(obj):
+                return None
+            return obj
+        elif isinstance(obj, (np.floating, np.integer)):
+            if np.isnan(obj) or np.isinf(obj):
+                return None
+            return float(obj) if isinstance(obj, np.floating) else int(obj)
+        elif pd.isna(obj):
+            return None
+        return obj
+    
+    # Sanitize latest_signal
+    latest = sanitize_for_json(latest)
+    
+    # Return all records for charting (user controls time range via years param)
+    # Convert index (datetime) to string for JSON serialization
+    results_copy = results.reset_index()
+    if 'date' in results_copy.columns:
+        results_copy['date'] = results_copy['date'].dt.strftime('%Y-%m-%d')
+    elif 'index' in results_copy.columns:
+        results_copy['date'] = pd.to_datetime(results_copy['index']).dt.strftime('%Y-%m-%d')
+        results_copy.drop(columns=['index'], inplace=True)
+    
+    # Replace NaN/Inf with None for JSON compliance
+    results_copy = results_copy.replace([np.inf, -np.inf], np.nan)
+    chart_data = results_copy.where(pd.notnull(results_copy), None).to_dict(orient='records')
+    chart_data = [sanitize_for_json(record) for record in chart_data]
     
     return {
         "ticker": ticker,
@@ -115,12 +149,13 @@ def analyze(ticker: str = Body(...), strategy_id: str = Body(...)):
     }
 
 @app.post("/backtest")
-def run_backtest(ticker: str = Body(...), strategy_id: str = Body(...)):
+def run_backtest(ticker: str = Body(...), strategy_id: str = Body(...), years: int = Body(5)):
     strategy = strategies.get(strategy_id)
     if not strategy:
         raise HTTPException(status_code=404, detail="Strategy not found")
 
-    df = data_service.get_data(ticker)
+    start_date = (pd.Timestamp.now() - pd.DateOffset(years=years)).strftime('%Y-%m-%d')
+    df = data_service.get_data(ticker, start_date=start_date)
     if df is None or df.empty:
         raise HTTPException(status_code=404, detail="Data not found")
         
@@ -152,6 +187,57 @@ def run_backtest(ticker: str = Body(...), strategy_id: str = Body(...)):
     results = backtester.run(df_processed, strategy, stop_loss_pct=stop_loss)
     
     return results
+
+@app.post("/backtest_all")
+def run_backtest_all(ticker: str = Body(...), years: int = Body(5)):
+    """Run all strategies on a single ticker and return comparison table."""
+    start_date = (pd.Timestamp.now() - pd.DateOffset(years=years)).strftime('%Y-%m-%d')
+    df = data_service.get_data(ticker, start_date=start_date)
+    if df is None or df.empty:
+        raise HTTPException(status_code=404, detail="Data not found for ticker")
+    
+    context = get_market_context()
+    results_table = []
+    
+    for strategy_id, strategy in strategies.items():
+        try:
+            # Process data based on strategy type
+            if strategy_id == 'weinstein':
+                df_processed = strategy.analyze(df.copy(), benchmark_df=context.get('^GSPC'))
+            elif strategy_id in ['dollar_ratio', 'put_call', 'ad_nhnl']:
+                df_ind = strategy.calculate_indicators(df.copy(), context_data=context)
+                df_processed = strategy.generate_signals(df_ind)
+            else:
+                df_processed = strategy.analyze(df.copy())
+            
+            # Run backtest
+            stop_loss = 0.08 if strategy_id != 'weinstein' else None
+            backtest_result = backtester.run(df_processed, strategy, stop_loss_pct=stop_loss)
+            
+            results_table.append({
+                "strategy_id": strategy_id,
+                "strategy_name": strategy.name,
+                "total_return_pct": backtest_result.get("total_return_pct", 0),
+                "win_rate": backtest_result.get("win_rate", 0),
+                "final_balance": backtest_result.get("final_balance", 0),
+                "total_trades": len(backtest_result.get("trades", []))
+            })
+        except Exception as e:
+            # If a strategy fails, add error entry
+            results_table.append({
+                "strategy_id": strategy_id,
+                "strategy_name": strategy.name,
+                "total_return_pct": 0,
+                "win_rate": 0,
+                "final_balance": 0,
+                "total_trades": 0,
+                "error": str(e)
+            })
+    
+    # Sort by total return descending
+    results_table.sort(key=lambda x: x.get("total_return_pct", 0), reverse=True)
+    
+    return {"ticker": ticker, "years": years, "results": results_table}
 
 if __name__ == "__main__":
     import uvicorn
